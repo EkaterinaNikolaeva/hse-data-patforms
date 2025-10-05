@@ -15,6 +15,10 @@
       shell: "pkill -u hadoop -f java || true"
       ignore_errors: yes
 
+    - name: Kill all processes of hadoop user
+      shell: "pkill -u hadoop || true"
+      ignore_errors: yes
+
 - name: Remove Hadoop installation and configs
   hosts: all
   become: yes

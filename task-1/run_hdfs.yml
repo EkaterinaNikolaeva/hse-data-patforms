@@ -97,6 +97,30 @@
         - { src: 'hdfs-site.xml.j2', dest: '/home/hadoop/hadoop-3.4.0/etc/hadoop/hdfs-site.xml' }
         - { src: 'workers.j2', dest: '/home/hadoop/hadoop-3.4.0/etc/hadoop/workers' }
 
+- name: Create namenode directory
+  hosts: namenodes
+  become: yes
+  tasks:
+    - name: Create namenode directory
+      file:
+        path: /home/hadoop/hadoop_data/namenode
+        state: directory
+        owner: hadoop
+        group: hadoop
+        mode: '0755'
+
+- name: Create datanode directory
+  hosts: hadoop_nodes
+  become: yes
+  tasks:
+    - name: Create datanode directory
+      file:
+        path: /home/hadoop/hadoop_data/datanode
+        state: directory
+        owner: hadoop
+        group: hadoop
+        mode: '0755'
+
 - name: Format and start HDFS
   hosts: namenodes
   become: yes
