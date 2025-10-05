@@ -15,7 +15,7 @@ sudo apt install python3 -y
 2. Склонируйте репозиторий командой
 
 ```
-git cline https://github.com/EkaterinaNikolaeva/hse-data-patforms.git
+git clone https://github.com/EkaterinaNikolaeva/hse-data-patforms.git
 ```
 
 3. Перейдите в директорию проекта
