@@ -1,0 +1,45 @@
+- name: Stop Hadoop services on namenodes
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Stop HDFS (namenode + datanodes)
+      command: "/home/hadoop/hadoop-3.4.0/sbin/stop-dfs.sh"
+      ignore_errors: yes
+
+- name: Kill any remaining Hadoop processes
+  hosts: all
+  become: yes
+  tasks:
+    - name: Kill Java processes owned by hadoop
+      shell: "pkill -u hadoop -f java || true"
+      ignore_errors: yes
+
+- name: Remove Hadoop installation and configs
+  hosts: all
+  become: yes
+  tasks:
+    - name: Remove Hadoop directory
+      file:
+        path: "/home/hadoop/hadoop-3.4.0/"
+        state: absent
+
+    - name: Remove Hadoop user home
+      file:
+        path: /home/hadoop
+        state: absent
+
+- name: Remove Hadoop user and group
+  hosts: all
+  become: yes
+  tasks:
+    - name: Remove hadoop user
+      user:
+        name: hadoop
+        state: absent
+        remove: yes
+
+    - name: Remove hadoop group
+      group:
+        name: hadoop
+        state: absent
