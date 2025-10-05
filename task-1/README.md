@@ -42,7 +42,7 @@ python3 main.py prepare
 python3 main.py run
 ```
 
-Эта команда запустит playbook run_hdfs.yml
+Эта команда запустит playbook `run_hdfs.yml`
 
 6. Для очистки примененных изменений примените
 
@@ -50,7 +50,7 @@ python3 main.py run
 python3 main.py clean
 ```
 
-Эта команда запустит playbook cleanup.yml
+Эта команда запустит playbook `cleanup.yml`
 
 ## Проверка работоспособности
 
