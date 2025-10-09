@@ -21,10 +21,11 @@ def action_prepare():
     subprocess.check_call(["sudo", "apt", "install", "ansible", "-y"])
     subprocess.check_call(["sudo", "apt", "install", "sshpass", "-y"])
     subprocess.check_call(["ansible", "--version"])
-    subprocess.check_call(["ansible", "all", "-m", "ping"])
+
 
 
 def action_run():
+    subprocess.check_call(["ansible", "all", "-m", "ping"])
     subprocess.check_call(["ansible-playbook", "run_hdfs.yml"])
 
 
