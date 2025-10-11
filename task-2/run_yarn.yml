@@ -21,3 +21,6 @@
   tasks:
     - name: Start YARN
       command: /home/hadoop/hadoop-3.4.0/sbin/start-yarn.sh
+    
+    - name: Start MapReduce History Server
+      command: /home/hadoop/hadoop-3.4.0/bin/mapred --daemon start historyserver

@@ -7,8 +7,8 @@ def parse_args():
     subparsers = parser.add_subparsers(dest="command")
     prepare_parser = subparsers.add_parser("prepare", help="prepare for launch")
     prepare_parser.set_defaults(func=action_prepare)
-    run_parser = subparsers.add_parser("run", help="Run configuration HDFS cluster")
-    run_parser.set_defaults(func=action_run)
+    run_parser = subparsers.add_parser("hdfs", help="Run configuration HDFS cluster")
+    run_parser.set_defaults(func=action_hdfs)
     yarn_parser = subparsers.add_parser("yarn", help="Run YARN configuration")
     yarn_parser.set_defaults(func=action_yarn)
     clean_parser = subparsers.add_parser(
@@ -26,7 +26,7 @@ def action_prepare():
 
 
 
-def action_run():
+def action_hdfs():
     subprocess.check_call(["ansible", "all", "-m", "ping"])
     subprocess.check_call(["ansible-playbook", "run_hdfs.yml"])
 
