@@ -40,7 +40,7 @@ def action_yarn():
 
 def action_test():
     subprocess.check_call(["ansible", "all", "-m", "ping"])
-    subprocess.check_call(["ansible-playbook", "yarn_test/test_mapreduce.yml"])
+    subprocess.check_call(["ansible-playbook", "yarn_test/test_mapreduce.yml", "-i", "inventory.ini"])
 
 
 def action_clean():
