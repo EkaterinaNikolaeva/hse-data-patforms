@@ -24,7 +24,7 @@
       ignore_errors: yes
 
     - name: Kill all processes of hadoop user
-      shell: "pkill -u hadoop || true"
+      shell: "pkill -9 -u hadoop || true"
       ignore_errors: yes
 
 - name: Remove Hadoop installation and configs
