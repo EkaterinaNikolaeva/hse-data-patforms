@@ -44,13 +44,53 @@ python3 main.py run
 
 Эта команда запустит playbook `run_hdfs.yml`
 
-6. Для очистки примененных изменений примените
+6. Для тестирования MapReduce функциональности выполните
+
+```
+python3 main.py test
+```
+
+Эта команда запустит playbook `yarn_test/test_mapreduce.yml` который:
+- Скопирует тестовые файлы из папки `yarn_test/` (mapper.py, reducer.py, file1.txt, file2.txt, file3.txt) на NameNode
+- Загрузит тестовые файлы в HDFS
+- Запустит MapReduce задачу подсчета слов
+- Покажет результаты и сравнит с ожидаемыми
+
+7. Для очистки примененных изменений примените
 
 ```
 python3 main.py clean
 ```
 
 Эта команда запустит playbook `cleanup.yml`
+
+## Тестовые файлы MapReduce
+
+В папке `yarn_test/` включены следующие тестовые файлы для проверки MapReduce:
+
+### Скрипты MapReduce:
+- `yarn_test/mapper.py` - скрипт для разбиения текста на слова
+- `yarn_test/reducer.py` - скрипт для подсчета частоты слов
+
+### Тестовые данные:
+- `yarn_test/file1.txt` - "hello yarn hello hadoop"
+- `yarn_test/file2.txt` - "mapreduce python test"  
+- `yarn_test/file3.txt` - "yarn cluster working"
+
+### Playbook для тестирования:
+- `yarn_test/test_mapreduce.yml` - Ansible playbook для автоматического тестирования
+
+### Ожидаемые результаты:
+```
+cluster	1
+hadoop	2
+hello	2
+mapreduce	1
+python	1
+test	1
+working	1
+yarn	2
+```
 
 ## Проверка работоспособности
 
