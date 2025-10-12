@@ -14,7 +14,7 @@
 
     - name: Copy mapper.py
       copy:
-        src: yarn_test/mapper.py
+        src: mapper.py
         dest: /home/hadoop/mapreduce_test/mapper.py
         owner: hadoop
         group: hadoop
@@ -22,7 +22,7 @@
 
     - name: Copy reducer.py
       copy:
-        src: yarn_test/reducer.py
+        src: reducer.py
         dest: /home/hadoop/mapreduce_test/reducer.py
         owner: hadoop
         group: hadoop
@@ -30,7 +30,7 @@
 
     - name: Copy test files
       copy:
-        src: "yarn_test/{{ item }}"
+        src: "{{ item }}"
         dest: /home/hadoop/mapreduce_test/{{ item }}
         owner: hadoop
         group: hadoop
