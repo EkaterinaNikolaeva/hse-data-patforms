@@ -3,6 +3,14 @@
   become: yes
   become_user: hadoop
   tasks:
+    - name: Stop YARN and MapReduce History Server
+      command: "/home/hadoop/hadoop-3.4.0/sbin/stop-yarn.sh"
+      ignore_errors: yes
+    
+    - name: Stop MapReduce History Server
+      command: "/home/hadoop/hadoop-3.4.0/bin/mapred --daemon stop historyserver"
+      ignore_errors: yes
+    
     - name: Stop HDFS (namenode + datanodes)
       command: "/home/hadoop/hadoop-3.4.0/sbin/stop-dfs.sh"
       ignore_errors: yes
