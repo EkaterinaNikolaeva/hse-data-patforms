@@ -45,6 +45,10 @@
   become: yes
   become_user: hadoop
   tasks:
+    - name: Remove existing input directory if exists
+      command: /home/hadoop/hadoop-3.4.0/bin/hdfs dfs -rm -r input/
+      ignore_errors: yes
+
     - name: Create input directory in HDFS
       command: /home/hadoop/hadoop-3.4.0/bin/hdfs dfs -mkdir -p input/
       ignore_errors: yes
@@ -74,8 +78,8 @@
       command: /home/hadoop/hadoop-3.4.0/bin/hdfs dfs -rm -r output
       ignore_errors: yes
 
-    - name: Run MapReduce streaming job
-      command: /home/hadoop/hadoop-3.4.0/bin/mapred streaming -files /home/hadoop/mapreduce_test/mapper.py,/home/hadoop/mapreduce_test/reducer.py -mapper "python3 /home/hadoop/mapreduce_test/mapper.py" -reducer "python3 /home/hadoop/mapreduce_test/reducer.py" -input input/ -output output
+    - name: Run MapReduce streaming job with YARN
+      command: /home/hadoop/hadoop-3.4.0/bin/hadoop jar /home/hadoop/hadoop-3.4.0/share/hadoop/tools/lib/hadoop-streaming-3.4.0.jar -files /home/hadoop/mapreduce_test/mapper.py,/home/hadoop/mapreduce_test/reducer.py -mapper "python3 /home/hadoop/mapreduce_test/mapper.py" -reducer "python3 /home/hadoop/mapreduce_test/reducer.py" -input input/ -output output
       register: mapreduce_result
 
     - name: Display MapReduce job result
