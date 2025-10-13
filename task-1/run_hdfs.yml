@@ -121,6 +121,22 @@
         group: hadoop
         mode: '0755'
 
+- name: Set up environment variables for hadoop user
+  hosts: hadoop_nodes
+  become: yes
+  tasks:
+    - name: Add environment variables to hadoop user's bashrc
+      lineinfile:
+        path: /home/hadoop/.bashrc
+        line: "{{ item }}"
+        owner: hadoop
+        group: hadoop
+        create: yes
+      loop:
+        - "export HADOOP_HOME=/home/hadoop/hadoop-3.4.0"
+        - "export JAVA_HOME=/usr/bin/jvm/java-11-openjdk-amd64"
+        - "export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin"
+
 - name: Format and start HDFS
   hosts: namenodes
   become: yes
