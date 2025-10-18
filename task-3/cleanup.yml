@@ -1,0 +1,130 @@
+- name: Stop Hive services on namenodes
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Stop HiveServer2
+      shell: "pkill -f 'hive.*hiveserver2' || true"
+      ignore_errors: yes
+
+    - name: Stop Hive Metastore
+      shell: "pkill -f 'hive.*metastore' || true"
+      ignore_errors: yes
+
+- name: Stop Hadoop services on namenodes
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Stop YARN and MapReduce History Server
+      command: "/home/hadoop/hadoop-3.4.0/sbin/stop-yarn.sh"
+      ignore_errors: yes
+    
+    - name: Stop MapReduce History Server
+      command: "/home/hadoop/hadoop-3.4.0/bin/mapred --daemon stop historyserver"
+      ignore_errors: yes
+    
+    - name: Stop HDFS (namenode + datanodes)
+      command: "/home/hadoop/hadoop-3.4.0/sbin/stop-dfs.sh"
+      ignore_errors: yes
+
+- name: Kill any remaining Hadoop processes
+  hosts: all
+  become: yes
+  tasks:
+    - name: Kill Java processes owned by hadoop
+      shell: "pkill -u hadoop -f java || true"
+      ignore_errors: yes
+
+    - name: Kill all processes of hadoop user
+      shell: "pkill -9 -u hadoop || true"
+      ignore_errors: yes
+
+- name: Remove Hive installation
+  hosts: namenodes
+  become: yes
+  tasks:
+    - name: Remove Hive directory
+      file:
+        path: "/home/hadoop/apache-hive-4.0.0-alpha-2-bin/"
+        state: absent
+
+- name: Remove Hive archive from jump node
+  hosts: jump_node
+  become: yes
+  tasks:
+    - name: Remove Hive archive from jump node
+      file:
+        path: "/home/team/downloads/apache-hive-4.0.0-alpha-2-bin.tar.gz"
+        state: absent
+      when: keep_archives is not defined or not keep_archives
+
+- name: Remove PostgreSQL and databases
+  hosts: datanodes[0]
+  become: yes
+  tasks:
+    - name: Stop PostgreSQL service
+      systemd:
+        name: postgresql
+        state: stopped
+
+    - name: Remove PostgreSQL packages
+      apt:
+        name: postgresql
+        state: absent
+        purge: yes
+
+    - name: Remove PostgreSQL data directory
+      file:
+        path: /var/lib/postgresql
+        state: absent
+
+    - name: Remove PostgreSQL configuration
+      file:
+        path: /etc/postgresql
+        state: absent
+
+- name: Remove PostgreSQL client
+  hosts: namenodes
+  become: yes
+  tasks:
+    - name: Remove PostgreSQL client packages
+      apt:
+        name: postgresql-client-16
+        state: absent
+        purge: yes
+
+- name: Remove Hadoop installation and configs
+  hosts: all
+  become: yes
+  tasks:
+    - name: Remove Hadoop directory
+      file:
+        path: "/home/hadoop/hadoop-3.4.0/"
+        state: absent
+
+    - name: Remove Hadoop archive from jump node
+      file:
+        path: "/home/team/downloads/hadoop-3.4.0.tar.gz"
+        state: absent
+      when: keep_archives is not defined or not keep_archives
+
+    - name: Remove Hadoop user home
+      file:
+        path: /home/hadoop
+        state: absent
+
+- name: Remove Hadoop user and group
+  hosts: all
+  become: yes
+  tasks:
+    - name: Remove hadoop user
+      user:
+        name: hadoop
+        state: absent
+        remove: yes
+
+    - name: Remove hadoop group
+      group:
+        name: hadoop
+        state: absent

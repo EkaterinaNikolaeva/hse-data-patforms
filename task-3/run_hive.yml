@@ -1,0 +1,155 @@
+- name: Configure PostgreSQL on DataNode
+  hosts: datanodes[1]
+  become: yes
+  tasks:
+    - name: Install PostgreSQL
+      apt:
+        name: postgresql
+        state: present
+
+    - name: Start and enable PostgreSQL service
+      systemd:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    - name: Create hive database user
+      postgresql_user:
+        state: present
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+      become_user: postgres
+
+    - name: Create metastore database
+      postgresql_db:
+        state: present
+        name: "{{ db_name }}"
+        owner: "{{ db_user }}"
+      become_user: postgres
+
+    - name: Grant database privileges to hive user
+      postgresql_privs:
+        type: database
+        database: "{{ db_name }}"
+        roles: "{{ db_user }}"
+        grant_option: no
+        privs: all
+      become_user: postgres
+
+    - name: Configure PostgreSQL authentication
+      lineinfile:
+        path: /etc/postgresql/16/main/pg_hba.conf
+        line: "host {{ db_name }} {{ db_user }} {{ hostvars[groups['namenodes'][0]]['ansible_host'] }}/32 password"
+        backup: yes
+
+    - name: Configure PostgreSQL to listen on DataNode address
+      lineinfile:
+        dest: /etc/postgresql/16/main/postgresql.conf
+        state: present
+        line: "listen_addresses = '{{ hostvars[groups['datanodes'][1]]['ansible_host'] }}'"
+
+    - name: Restart PostgreSQL
+      systemd:
+        name: postgresql
+        state: restarted
+
+- name: Download Hive archive on jump node
+  hosts: jump_node
+  remote_user: team
+  gather_facts: no
+  tasks:
+    - name: Ensure directory exists for download
+      file:
+        path: /home/team/downloads
+        state: directory
+        mode: '0755'
+
+    - name: Download Hive archive
+      get_url:
+        url: https://archive.apache.org/dist/hive/hive-4.0.0-alpha-2/apache-hive-4.0.0-alpha-2-bin.tar.gz
+        dest: /home/team/downloads/apache-hive-4.0.0-alpha-2-bin.tar.gz
+        mode: '0644'
+        timeout: 1800
+        force: no
+
+- name: Install and configure Hive on NameNode
+  hosts: namenodes
+  become: yes
+  tasks:
+    - name: Install PostgreSQL client
+      apt:
+        name: postgresql-client-16
+        state: present
+
+    - name: Copy Hive archive
+      copy:
+        src: /home/team/downloads/apache-hive-4.0.0-alpha-2-bin.tar.gz
+        dest: /home/hadoop/apache-hive-4.0.0-alpha-2-bin.tar.gz
+        mode: '0644'
+
+    - name: Extract Hive archive
+      unarchive:
+        src: /home/hadoop/apache-hive-4.0.0-alpha-2-bin.tar.gz
+        dest: /home/hadoop/
+        remote_src: yes
+        creates: /home/hadoop/apache-hive-4.0.0-alpha-2-bin
+        owner: hadoop
+        group: hadoop
+
+    - name: Download PostgreSQL JDBC driver
+      get_url:
+        url: https://jdbc.postgresql.org/download/postgresql-42.7.4.jar
+        dest: /home/hadoop/apache-hive-4.0.0-alpha-2-bin/lib/postgresql-42.7.4.jar
+        mode: '0644'
+        owner: hadoop
+        group: hadoop
+      retries: 5
+      delay: 3
+
+    - name: Copy Hive configuration
+      template:
+        src: hive-site.xml.j2
+        dest: /home/hadoop/apache-hive-4.0.0-alpha-2-bin/conf/hive-site.xml
+        owner: hadoop
+        group: hadoop
+        mode: '0644'
+
+    - name: Configure Hive environment variables in ~/.profile
+      blockinfile:
+        path: /home/hadoop/.profile
+        append_newline: true
+        prepend_newline: true
+        marker: "# {mark} ANSIBLE MANAGED BLOCK HIVE"
+        block: |
+          export HIVE_HOME=/home/hadoop/apache-hive-4.0.0-alpha-2-bin
+          export HIVE_CONF_DIR=$HIVE_HOME/conf
+          export HIVE_AUX_JARS_PATH=$HIVE_HOME/lib/*
+          export PATH=$PATH:$HIVE_HOME/bin
+        owner: hadoop
+        group: hadoop
+
+- name: Configure and start Hive services
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Create HDFS directories for Hive
+      shell: "source ~/.profile && {{ item }}"
+      loop:
+        - hdfs dfs -mkdir -p /tmp
+        - hdfs dfs -mkdir -p /user/hive/warehouse
+        - hdfs dfs -chmod g+w /tmp
+        - hdfs dfs -chmod g+w /user/hive/warehouse
+
+    - name: Initialize Hive schema
+      shell: source ~/.profile && schematool -dbType postgres -initOrUpgradeSchema
+
+    - name: Start Hive Metastore
+      shell: source ~/.profile && hive --service metastore
+      async: 300
+      poll: 0
+
+    - name: Start HiveServer2
+      shell: source ~/.profile && hive --hiveconf hive.server2.enable.doAs=false --hiveconf hive.security.authorization.enabled=false --service hiveserver2
+      async: 300
+      poll: 0
