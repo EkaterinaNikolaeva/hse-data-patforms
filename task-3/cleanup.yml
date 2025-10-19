@@ -49,18 +49,8 @@
         path: "/home/hadoop/apache-hive-4.0.0-alpha-2-bin/"
         state: absent
 
-- name: Remove Hive archive from jump node
-  hosts: jump_node
-  become: yes
-  tasks:
-    - name: Remove Hive archive from jump node
-      file:
-        path: "/home/team/downloads/apache-hive-4.0.0-alpha-2-bin.tar.gz"
-        state: absent
-      when: keep_archives is not defined or not keep_archives
-
 - name: Remove PostgreSQL and databases
-  hosts: datanodes[0]
+  hosts: datanodes[1]
   become: yes
   tasks:
     - name: Stop PostgreSQL service
@@ -102,12 +92,6 @@
       file:
         path: "/home/hadoop/hadoop-3.4.0/"
         state: absent
-
-    - name: Remove Hadoop archive from jump node
-      file:
-        path: "/home/team/downloads/hadoop-3.4.0.tar.gz"
-        state: absent
-      when: keep_archives is not defined or not keep_archives
 
     - name: Remove Hadoop user home
       file:

@@ -21,7 +21,7 @@ git clone https://github.com/EkaterinaNikolaeva/hse-data-patforms.git
 3. Перейдите в директорию проекта
 
 ```
-cd hse-data-patforms/task-2/
+cd hse-data-patforms/task-3/
 ```
 
 4. Для установки необходимых зависимостей выполните
