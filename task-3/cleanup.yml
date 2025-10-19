@@ -60,7 +60,7 @@
 
     - name: Remove PostgreSQL packages
       apt:
-        name: postgresql
+        name: postgresql-16
         state: absent
         purge: yes
 

@@ -5,7 +5,7 @@
     - name: Install PostgreSQL
       apt:
       name:
-        - postgresql
+        - postgresql-16
         - libpq-dev
         - python3-psycopg2
         state: present
@@ -149,10 +149,10 @@
 
     - name: Start Hive Metastore
       shell: . ~/.profile && hive --service metastore
-      async: 300
+      async: 3600
       poll: 0
 
     - name: Start HiveServer2
       shell: . ~/.profile && hive --hiveconf hive.server2.enable.doAs=false --hiveconf hive.security.authorization.enabled=false --service hiveserver2
-      async: 300
+      async: 3600
       poll: 0

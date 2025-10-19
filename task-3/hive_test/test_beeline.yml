@@ -5,36 +5,32 @@
   tasks:
     - name: Wait for HiveServer2
       wait_for:
-        host: "{{ ansible_host }}"
-        port: 10000
+        host: team-1-nn
+        port: 5433
         state: started
-        timeout: "{{ test_timeout }}"
       delegate_to: localhost
 
     - name: Create Beeline test script
       copy:
         dest: /home/hadoop/beeline_test.sql
         content: |
-          !connect jdbc:hive2://team-1 #TODO:10000/default
-          ;
           CREATE DATABASE IF NOT EXISTS hive_test;
           USE hive_test;
           
-          CREATE TABLE IF NOT EXISTS connectivity_test (id INT, status STRING);
-          INSERT INTO connectivity_test VALUES (1, 'success');
+          CREATE TABLE IF NOT EXISTS test (id INT, status STRING);
+          INSERT INTO test VALUES (1, 'success');
           
-          SELECT COUNT(*) FROM connectivity_test WHERE status = 'success';
+          SELECT COUNT(*) FROM test WHERE status = 'success';
           
           DROP TABLE connectivity_test;
-          DROP DATABASE hive_functional_test;
-          !quit
+          DROP DATABASE hive_test;
         owner: hadoop
         group: hadoop
         mode: '0644'
 
     - name: Execute Beeline test
       shell: |
-        . ~/.profile && beeline -f /home/hadoop/beeline_test.sql
+        . ~/.profile && beeline -u jdbc:hive2:team-1-nn:5433 -f /home/hadoop/beeline_test.sql
       register: beeline_test
       failed_when:
         - beeline_test.rc != 0
