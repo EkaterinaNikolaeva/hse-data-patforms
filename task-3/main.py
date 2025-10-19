@@ -13,8 +13,8 @@ def parse_args():
     yarn_parser.set_defaults(func=action_yarn)
     hive_parser = subparsers.add_parser("hive", help="Run Hive configuration")
     hive_parser.set_defaults(func=action_hive)
-    test_parser = subparsers.add_parser("test", help="Test MapReduce functionality")
-    test_parser.set_defaults(func=action_yarn_test)
+    yarn_test_parser = subparsers.add_parser("yarn-test", help="Test MapReduce functionality")
+    yarn_test_parser.set_defaults(func=action_yarn_test)
     hive_test_parser = subparsers.add_parser("hive-test", help="Test Hive functionality")
     hive_test_parser.set_defaults(func=action_hive_test)
     clean_parser = subparsers.add_parser(
