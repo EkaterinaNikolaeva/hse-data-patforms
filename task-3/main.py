@@ -14,7 +14,9 @@ def parse_args():
     hive_parser = subparsers.add_parser("hive", help="Run Hive configuration")
     hive_parser.set_defaults(func=action_hive)
     test_parser = subparsers.add_parser("test", help="Test MapReduce functionality")
-    test_parser.set_defaults(func=action_test)
+    test_parser.set_defaults(func=action_yarn_test)
+    hive_test_parser = subparsers.add_parser("hive-test", help="Test Hive functionality")
+    hive_test_parser.set_defaults(func=action_hive_test)
     clean_parser = subparsers.add_parser(
         "clean", help="clear everything related to hdfs"
     )
@@ -50,9 +52,14 @@ def action_hive():
     subprocess.check_call(["ansible-playbook", "run_hive.yml"])
 
 
-def action_test():
+def action_yarn_test():
     subprocess.check_call(["ansible", "all", "-m", "ping"])
     subprocess.check_call(["ansible-playbook", "yarn_test/test_mapreduce.yml", "-i", "inventory.ini"])
+
+
+def action_hive_test():
+    subprocess.check_call(["ansible", "all", "-m", "ping"])
+    subprocess.check_call(["ansible-playbook", "hive_test/test_beeline.yml", "-i", "inventory.ini"])
 
 
 def action_clean():

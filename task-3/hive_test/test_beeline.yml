@@ -22,7 +22,7 @@
           
           SELECT COUNT(*) FROM test WHERE status = 'success';
           
-          DROP TABLE connectivity_test;
+          DROP TABLE test;
           DROP DATABASE hive_test;
         owner: hadoop
         group: hadoop
@@ -30,7 +30,7 @@
 
     - name: Execute Beeline test
       shell: |
-        . ~/.profile && beeline -u jdbc:hive2:team-1-nn:5433 -f /home/hadoop/beeline_test.sql
+        . ~/.profile && beeline -u jdbc:hive2://team-1-nn:5433 -f /home/hadoop/beeline_test.sql
       register: beeline_test
       failed_when:
         - beeline_test.rc != 0

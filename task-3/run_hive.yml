@@ -4,10 +4,10 @@
   tasks:
     - name: Install PostgreSQL
       apt:
-      name:
-        - postgresql-16
-        - libpq-dev
-        - python3-psycopg2
+        name:
+          - postgresql-16
+          - libpq-dev
+          - python3-psycopg2
         state: present
 
     - name: Start and enable PostgreSQL service
