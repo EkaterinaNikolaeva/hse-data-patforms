@@ -16,7 +16,7 @@
     </property>
     <property>
         <name>javax.jdo.option.ConnectionURL</name>
-        <value>jdbc:postgresql://{{ hostvars[groups['datanodes'][0]]['ansible_host'] }}:5432/{{ db_name }}</value>
+        <value>jdbc:postgresql://{{ hostvars[groups['datanodes'][1]]['ansible_host'] }}:5432/{{ db_name }}</value>
     </property>
     <property>
         <name>javax.jdo.option.ConnectionDriverName</name>

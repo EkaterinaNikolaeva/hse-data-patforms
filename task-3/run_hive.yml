@@ -4,7 +4,10 @@
   tasks:
     - name: Install PostgreSQL
       apt:
-        name: postgresql
+      name:
+        - postgresql
+        - libpq-dev
+        - python3-psycopg2
         state: present
 
     - name: Start and enable PostgreSQL service
@@ -134,7 +137,7 @@
   become_user: hadoop
   tasks:
     - name: Create HDFS directories for Hive
-      shell: "source ~/.profile && {{ item }}"
+      shell: ". ~/.profile && {{ item }}"
       loop:
         - hdfs dfs -mkdir -p /tmp
         - hdfs dfs -mkdir -p /user/hive/warehouse
@@ -142,14 +145,14 @@
         - hdfs dfs -chmod g+w /user/hive/warehouse
 
     - name: Initialize Hive schema
-      shell: source ~/.profile && schematool -dbType postgres -initOrUpgradeSchema
+      shell: . ~/.profile && schematool -dbType postgres -initOrUpgradeSchema
 
     - name: Start Hive Metastore
-      shell: source ~/.profile && hive --service metastore
+      shell: . ~/.profile && hive --service metastore
       async: 300
       poll: 0
 
     - name: Start HiveServer2
-      shell: source ~/.profile && hive --hiveconf hive.server2.enable.doAs=false --hiveconf hive.security.authorization.enabled=false --service hiveserver2
+      shell: . ~/.profile && hive --hiveconf hive.server2.enable.doAs=false --hiveconf hive.security.authorization.enabled=false --service hiveserver2
       async: 300
       poll: 0
