@@ -1,0 +1,150 @@
+- name: Setup Hadoop users and SSH keys
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure hadoop user exists
+      user:
+        name: hadoop
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Ensure .ssh directory exists
+      file:
+        path: /home/hadoop/.ssh
+        state: directory
+        owner: hadoop
+        group: hadoop
+        mode: '0700'
+
+    - name: Generate SSH key for hadoop user
+      openssh_keypair:
+        path: /home/hadoop/.ssh/id_rsa
+        type: rsa
+        size: 2048
+        owner: hadoop
+        group: hadoop
+        mode: '0600'
+        force: no
+      register: hadoop_keypair
+
+    - name: Add authorized keys for all hosts
+      authorized_key:
+        user: hadoop
+        key: "{{ hostvars[item].hadoop_keypair.public_key }}"
+      loop: "{{ groups['all'] }}"
+
+    - name: Update /etc/hosts from template
+      template:
+        src: hosts.j2
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: '0644'
+
+- name: Download Hadoop archive on jump node
+  hosts: jump_node
+  remote_user: team
+  gather_facts: no
+  tasks:
+    - name: Ensure directory exists for download
+      file:
+        path: /home/team/downloads
+        state: directory
+        mode: '0755'
+
+    - name: Download Hadoop archive
+      get_url:
+        url: https://dlcdn.apache.org/hadoop/common/hadoop-3.4.0/hadoop-3.4.0.tar.gz
+        dest: /home/team/downloads/hadoop-3.4.0.tar.gz
+        mode: '0644'
+        timeout: 1800
+        force: no
+
+- name: Distribute and install Hadoop
+  hosts: hadoop_nodes
+  become: yes
+  tasks:
+    - name: Copy Hadoop archive
+      copy:
+        src: /home/team/downloads/hadoop-3.4.0.tar.gz
+        dest: /home/hadoop/hadoop-3.4.0.tar.gz
+        mode: '0644'
+
+    - name: Extract Hadoop archive
+      unarchive:
+        src: /home/hadoop/hadoop-3.4.0.tar.gz
+        dest: /home/hadoop/
+        remote_src: yes
+        creates: /home/hadoop/hadoop-3.4.0
+
+    - name: Ensure Hadoop ownership after extraction
+      file:
+        path: /home/hadoop/hadoop-3.4.0
+        owner: hadoop
+        group: hadoop
+        recurse: yes
+
+    - name: Copy Hadoop configuration files
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: hadoop
+        group: hadoop
+        mode: '0644'
+      loop:
+        - { src: 'hadoop-env.sh.j2', dest: '/home/hadoop/hadoop-3.4.0/etc/hadoop/hadoop-env.sh' }
+        - { src: 'core-site.xml.j2', dest: '/home/hadoop/hadoop-3.4.0/etc/hadoop/core-site.xml' }
+        - { src: 'hdfs-site.xml.j2', dest: '/home/hadoop/hadoop-3.4.0/etc/hadoop/hdfs-site.xml' }
+        - { src: 'workers.j2', dest: '/home/hadoop/hadoop-3.4.0/etc/hadoop/workers' }
+
+- name: Create namenode directory
+  hosts: namenodes
+  become: yes
+  tasks:
+    - name: Create namenode directory
+      file:
+        path: /home/hadoop/hadoop_data/namenode
+        state: directory
+        owner: hadoop
+        group: hadoop
+        mode: '0755'
+
+- name: Create datanode directory
+  hosts: hadoop_nodes
+  become: yes
+  tasks:
+    - name: Create datanode directory
+      file:
+        path: /home/hadoop/hadoop_data/datanode
+        state: directory
+        owner: hadoop
+        group: hadoop
+        mode: '0755'
+
+- name: Set up environment variables for hadoop user
+  hosts: hadoop_nodes
+  become: yes
+  tasks:
+    - name: Add environment variables to hadoop user's profile
+      lineinfile:
+        path: /home/hadoop/.profile
+        line: "{{ item }}"
+        owner: hadoop
+        group: hadoop
+        create: yes
+      loop:
+        - "export HADOOP_HOME=/home/hadoop/hadoop-3.4.0"
+        - "export JAVA_HOME=/usr/bin/jvm/java-11-openjdk-amd64"
+        - "export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin"
+
+- name: Format and start HDFS
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  gather_facts: no
+  tasks:
+    - name: Format HDFS
+      command: /home/hadoop/hadoop-3.4.0/bin/hdfs namenode -format -force
+
+    - name: Start HDFS
+      command: /home/hadoop/hadoop-3.4.0/sbin/start-dfs.sh
