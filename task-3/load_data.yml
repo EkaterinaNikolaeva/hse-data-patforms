@@ -52,6 +52,9 @@
     - name: Create HDFS directories for data
       shell: . ~/.profile && hdfs dfs -mkdir -p /user/hive/warehouse/trademarks_db.db/trademarks_staging && hdfs dfs -mkdir -p /user/hive/warehouse/trademarks_db.db/trademarks
 
+    - name: Clean up old data in HDFS directories
+      shell: . ~/.profile && hdfs dfs -rm -r /user/hive/warehouse/trademarks_db.db/trademarks_staging/* /user/hive/warehouse/trademarks_db.db/trademarks/* 2>/dev/null || true
+
     - name: Upload data file to HDFS staging directory
       shell: . ~/.profile && hdfs dfs -put /home/hadoop/data-20241101-structure-20180828.csv /user/hive/warehouse/trademarks_db.db/trademarks_staging/
 
@@ -68,8 +71,12 @@
           CREATE DATABASE IF NOT EXISTS trademarks_db;
           USE trademarks_db;
 
+          -- Drop existing tables if they exist to ensure clean reload
+          DROP TABLE IF EXISTS trademarks;
+          DROP TABLE IF EXISTS trademarks_staging;
+
           -- Create external table with partition by year
-          CREATE EXTERNAL TABLE IF NOT EXISTS trademarks (
+          CREATE EXTERNAL TABLE trademarks (
             registration_number STRING,
             registration_date STRING,
             application_number STRING,
@@ -130,9 +137,12 @@
             publication_url STRING
           )
           PARTITIONED BY (year INT)
-          ROW FORMAT DELIMITED
-          FIELDS TERMINATED BY ','
-          LINES TERMINATED BY '\n'
+          ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+          WITH SERDEPROPERTIES (
+            "separatorChar" = ",",
+            "quoteChar" = "\"",
+            "escapeChar" = "\\"
+          )
           STORED AS TEXTFILE
           LOCATION '/user/hive/warehouse/trademarks_db.db/trademarks'
           TBLPROPERTIES ('skip.header.line.count'='1');
@@ -142,7 +152,7 @@
           SET hive.exec.dynamic.partition.mode = nonstrict;
 
           -- Create staging table for loading data
-          CREATE EXTERNAL TABLE IF NOT EXISTS trademarks_staging (
+          CREATE EXTERNAL TABLE trademarks_staging (
             registration_number STRING,
             registration_date STRING,
             application_number STRING,
@@ -202,9 +212,12 @@
             actual STRING,
             publication_url STRING
           )
-          ROW FORMAT DELIMITED
-          FIELDS TERMINATED BY ','
-          LINES TERMINATED BY '\n'
+          ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+          WITH SERDEPROPERTIES (
+            "separatorChar" = ",",
+            "quoteChar" = "\"",
+            "escapeChar" = "\\"
+          )
           STORED AS TEXTFILE
           LOCATION '/user/hive/warehouse/trademarks_db.db/trademarks_staging'
           TBLPROPERTIES ('skip.header.line.count'='1');
