@@ -41,6 +41,41 @@
         dest: /home/hadoop/data-20241101-structure-20180828.csv
         mode: '0644'
 
+    - name: Preprocess CSV file to remove BOM and normalize CSV format
+      shell: |
+        python3 << 'EOF'
+        import csv
+        import codecs
+        import shutil
+        import sys
+        
+        input_file = '/home/hadoop/data-20241101-structure-20180828.csv'
+        output_file = '/home/hadoop/data-20241101-structure-20180828_processed.csv'
+        
+        try:
+            # Read CSV with proper handling of quotes, commas, and BOM
+            with codecs.open(input_file, 'r', encoding='utf-8-sig') as infile:
+                reader = csv.reader(infile, quoting=csv.QUOTE_MINIMAL)
+                rows = list(reader)
+            
+            # Remove any remaining BOM characters from first data row if present
+            if len(rows) > 1 and rows[1] and len(rows[1]) > 0:
+                rows[1][0] = rows[1][0].replace('\ufeff', '')
+            
+            # Write CSV back with proper formatting (normalized quotes and escaping)
+            with open(output_file, 'w', encoding='utf-8', newline='') as outfile:
+                writer = csv.writer(outfile, quoting=csv.QUOTE_MINIMAL)
+                writer.writerows(rows)
+            
+            # Replace original file
+            shutil.move(output_file, input_file)
+            print(f"Successfully processed {len(rows)} rows")
+        except Exception as e:
+            print(f"Error processing CSV: {e}", file=sys.stderr)
+            sys.exit(1)
+        EOF
+      become_user: hadoop
+
     - name: Wait for HiveServer2
       wait_for:
         host: team-1-nn
@@ -77,33 +112,33 @@
 
           -- Create external table with partition by year
           CREATE EXTERNAL TABLE trademarks (
-            registration_number STRING,
-            registration_date STRING,
-            application_number STRING,
-            application_date STRING,
-            priority_date STRING,
-            exhibition_priority_date STRING,
+            registration_number BIGINT,
+            registration_date INT,
+            application_number INT,
+            application_date INT,
+            priority_date INT,
+            exhibition_priority_date INT,
             paris_convention_priority_number STRING,
-            paris_convention_priority_date STRING,
+            paris_convention_priority_date INT,
             paris_convention_priority_country_code STRING,
             initial_application_number STRING,
-            initial_application_priority_date STRING,
+            initial_application_priority_date INT,
             initial_registration_number STRING,
-            initial_registration_date STRING,
+            initial_registration_date INT,
             international_registration_number STRING,
-            international_registration_date STRING,
-            international_registration_priority_date STRING,
-            international_registration_entry_date STRING,
+            international_registration_date INT,
+            international_registration_priority_date INT,
+            international_registration_entry_date INT,
             application_number_for_recognition_of_trademark_from_crimea STRING,
-            application_date_for_recognition_of_trademark_from_crimea STRING,
+            application_date_for_recognition_of_trademark_from_crimea INT,
             crimean_trademark_application_number_for_state_registration_in_ukraine STRING,
-            crimean_trademark_application_date_for_state_registration_in_ukraine STRING,
+            crimean_trademark_application_date_for_state_registration_in_ukraine INT,
             crimean_trademark_certificate_number_in_ukraine STRING,
             exclusive_rights_transfer_agreement_registration_number STRING,
-            exclusive_rights_transfer_agreement_registration_date STRING,
+            exclusive_rights_transfer_agreement_registration_date INT,
             legally_related_applications STRING,
             legally_related_registrations STRING,
-            expiration_date STRING,
+            expiration_date INT,
             right_holder_name STRING,
             foreign_right_holder_name STRING,
             right_holder_address STRING,
@@ -111,29 +146,29 @@
             right_holder_ogrn STRING,
             right_holder_inn STRING,
             correspondence_address STRING,
-            collective STRING,
+            collective BOOLEAN,
             collective_users STRING,
             extraction_from_charter_of_the_collective_trademark STRING,
             color_specification STRING,
             unprotected_elements STRING,
             kind_specification STRING,
-            threedimensional STRING,
+            threedimensional BOOLEAN,
             threedimensional_specification STRING,
-            holographic STRING,
+            holographic BOOLEAN,
             holographic_specification STRING,
-            sound STRING,
+            sound BOOLEAN,
             sound_specification STRING,
-            olfactory STRING,
+            olfactory BOOLEAN,
             olfactory_specification STRING,
-            color STRING,
+            color BOOLEAN,
             color_trademark_specification STRING,
-            light STRING,
+            light BOOLEAN,
             light_specification STRING,
-            changing STRING,
+            changing BOOLEAN,
             changing_specification STRING,
-            positional STRING,
+            positional BOOLEAN,
             positional_specification STRING,
-            actual STRING,
+            actual BOOLEAN,
             publication_url STRING
           )
           PARTITIONED BY (year INT)
@@ -223,36 +258,36 @@
           TBLPROPERTIES ('skip.header.line.count'='1');
 
           -- Load data from staging table to partitioned table
-          -- Handle BOM character in registration_date by trimming and extracting year
+          -- Convert types from STRING to appropriate types (INT, BIGINT, BOOLEAN)
           INSERT OVERWRITE TABLE trademarks PARTITION (year)
           SELECT 
-            registration_number,
-            registration_date,
-            application_number,
-            application_date,
-            priority_date,
-            exhibition_priority_date,
+            CAST(registration_number AS BIGINT),
+            CAST(registration_date AS INT),
+            CAST(application_number AS INT),
+            CAST(application_date AS INT),
+            CAST(NULLIF(priority_date, '') AS INT),
+            CAST(NULLIF(exhibition_priority_date, '') AS INT),
             paris_convention_priority_number,
-            paris_convention_priority_date,
+            CAST(NULLIF(paris_convention_priority_date, '') AS INT),
             paris_convention_priority_country_code,
             initial_application_number,
-            initial_application_priority_date,
+            CAST(NULLIF(initial_application_priority_date, '') AS INT),
             initial_registration_number,
-            initial_registration_date,
+            CAST(NULLIF(initial_registration_date, '') AS INT),
             international_registration_number,
-            international_registration_date,
-            international_registration_priority_date,
-            international_registration_entry_date,
+            CAST(NULLIF(international_registration_date, '') AS INT),
+            CAST(NULLIF(international_registration_priority_date, '') AS INT),
+            CAST(NULLIF(international_registration_entry_date, '') AS INT),
             application_number_for_recognition_of_trademark_from_crimea,
-            application_date_for_recognition_of_trademark_from_crimea,
+            CAST(NULLIF(application_date_for_recognition_of_trademark_from_crimea, '') AS INT),
             crimean_trademark_application_number_for_state_registration_in_ukraine,
-            crimean_trademark_application_date_for_state_registration_in_ukraine,
+            CAST(NULLIF(crimean_trademark_application_date_for_state_registration_in_ukraine, '') AS INT),
             crimean_trademark_certificate_number_in_ukraine,
             exclusive_rights_transfer_agreement_registration_number,
-            exclusive_rights_transfer_agreement_registration_date,
+            CAST(NULLIF(exclusive_rights_transfer_agreement_registration_date, '') AS INT),
             legally_related_applications,
             legally_related_registrations,
-            expiration_date,
+            CAST(NULLIF(expiration_date, '') AS INT),
             right_holder_name,
             foreign_right_holder_name,
             right_holder_address,
@@ -260,29 +295,29 @@
             right_holder_ogrn,
             right_holder_inn,
             correspondence_address,
-            collective,
+            CAST(CASE WHEN collective = '' THEN NULL ELSE LOWER(collective) END AS BOOLEAN),
             collective_users,
             extraction_from_charter_of_the_collective_trademark,
             color_specification,
             unprotected_elements,
             kind_specification,
-            threedimensional,
+            CAST(CASE WHEN threedimensional = '' THEN NULL ELSE LOWER(threedimensional) END AS BOOLEAN),
             threedimensional_specification,
-            holographic,
+            CAST(CASE WHEN holographic = '' THEN NULL ELSE LOWER(holographic) END AS BOOLEAN),
             holographic_specification,
-            sound,
+            CAST(CASE WHEN sound = '' THEN NULL ELSE LOWER(sound) END AS BOOLEAN),
             sound_specification,
-            olfactory,
+            CAST(CASE WHEN olfactory = '' THEN NULL ELSE LOWER(olfactory) END AS BOOLEAN),
             olfactory_specification,
-            color,
+            CAST(CASE WHEN color = '' THEN NULL ELSE LOWER(color) END AS BOOLEAN),
             color_trademark_specification,
-            light,
+            CAST(CASE WHEN light = '' THEN NULL ELSE LOWER(light) END AS BOOLEAN),
             light_specification,
-            changing,
+            CAST(CASE WHEN changing = '' THEN NULL ELSE LOWER(changing) END AS BOOLEAN),
             changing_specification,
-            positional,
+            CAST(CASE WHEN positional = '' THEN NULL ELSE LOWER(positional) END AS BOOLEAN),
             positional_specification,
-            actual,
+            CAST(CASE WHEN actual = '' THEN NULL ELSE LOWER(actual) END AS BOOLEAN),
             publication_url,
             CAST(SUBSTR(TRIM(registration_date), 1, 4) AS INT) AS year
           FROM trademarks_staging
