@@ -1,0 +1,323 @@
+---
+- name: Download data file on jump node
+  hosts: jump_node
+  remote_user: team
+  gather_facts: no
+  tasks:
+    - name: Ensure directory exists for download
+      file:
+        path: /home/team/downloads
+        state: directory
+        mode: '0755'
+
+    - name: Download data file using wget
+      shell: |
+        cd /home/team/downloads
+        wget --no-check-certificate https://rospatent.gov.ru/opendata/7730176088-tz/data-20241101-structure-20180828.csv -O data-20241101-structure-20180828.csv
+      args:
+        creates: /home/team/downloads/data-20241101-structure-20180828.csv
+
+- name: Fetch data file from jump node to local machine
+  hosts: jump_node
+  remote_user: team
+  gather_facts: no
+  tasks:
+    - name: Fetch data file
+      fetch:
+        src: /home/team/downloads/data-20241101-structure-20180828.csv
+        dest: /tmp/data-20241101-structure-20180828.csv
+        flat: yes
+
+- name: Copy data file to NameNode and upload to HDFS
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Copy data file to namenode
+      copy:
+        src: /tmp/data-20241101-structure-20180828.csv
+        dest: /home/hadoop/data-20241101-structure-20180828.csv
+        mode: '0644'
+
+    - name: Wait for HiveServer2
+      wait_for:
+        host: team-1-nn
+        port: 5433
+        state: started
+        timeout: 300
+      delegate_to: localhost
+
+    - name: Create HDFS directories for data
+      shell: . ~/.profile && hdfs dfs -mkdir -p /user/hive/warehouse/trademarks_db.db/trademarks_staging && hdfs dfs -mkdir -p /user/hive/warehouse/trademarks_db.db/trademarks
+
+    - name: Upload data file to HDFS staging directory
+      shell: . ~/.profile && hdfs dfs -put /home/hadoop/data-20241101-structure-20180828.csv /user/hive/warehouse/trademarks_db.db/trademarks_staging/
+
+- name: Create Hive table and load data with year partition
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Create SQL script for table creation and data loading
+      copy:
+        dest: /home/hadoop/load_trademarks.sql
+        content: |
+          -- Create database
+          CREATE DATABASE IF NOT EXISTS trademarks_db;
+          USE trademarks_db;
+
+          -- Create external table with partition by year
+          CREATE EXTERNAL TABLE IF NOT EXISTS trademarks (
+            registration_number STRING,
+            registration_date STRING,
+            application_number STRING,
+            application_date STRING,
+            priority_date STRING,
+            exhibition_priority_date STRING,
+            paris_convention_priority_number STRING,
+            paris_convention_priority_date STRING,
+            paris_convention_priority_country_code STRING,
+            initial_application_number STRING,
+            initial_application_priority_date STRING,
+            initial_registration_number STRING,
+            initial_registration_date STRING,
+            international_registration_number STRING,
+            international_registration_date STRING,
+            international_registration_priority_date STRING,
+            international_registration_entry_date STRING,
+            application_number_for_recognition_of_trademark_from_crimea STRING,
+            application_date_for_recognition_of_trademark_from_crimea STRING,
+            crimean_trademark_application_number_for_state_registration_in_ukraine STRING,
+            crimean_trademark_application_date_for_state_registration_in_ukraine STRING,
+            crimean_trademark_certificate_number_in_ukraine STRING,
+            exclusive_rights_transfer_agreement_registration_number STRING,
+            exclusive_rights_transfer_agreement_registration_date STRING,
+            legally_related_applications STRING,
+            legally_related_registrations STRING,
+            expiration_date STRING,
+            right_holder_name STRING,
+            foreign_right_holder_name STRING,
+            right_holder_address STRING,
+            right_holder_country_code STRING,
+            right_holder_ogrn STRING,
+            right_holder_inn STRING,
+            correspondence_address STRING,
+            collective STRING,
+            collective_users STRING,
+            extraction_from_charter_of_the_collective_trademark STRING,
+            color_specification STRING,
+            unprotected_elements STRING,
+            kind_specification STRING,
+            threedimensional STRING,
+            threedimensional_specification STRING,
+            holographic STRING,
+            holographic_specification STRING,
+            sound STRING,
+            sound_specification STRING,
+            olfactory STRING,
+            olfactory_specification STRING,
+            color STRING,
+            color_trademark_specification STRING,
+            light STRING,
+            light_specification STRING,
+            changing STRING,
+            changing_specification STRING,
+            positional STRING,
+            positional_specification STRING,
+            actual STRING,
+            publication_url STRING
+          )
+          PARTITIONED BY (year INT)
+          ROW FORMAT DELIMITED
+          FIELDS TERMINATED BY ','
+          LINES TERMINATED BY '\n'
+          STORED AS TEXTFILE
+          LOCATION '/user/hive/warehouse/trademarks_db.db/trademarks'
+          TBLPROPERTIES ('skip.header.line.count'='1');
+
+          -- Enable dynamic partitioning
+          SET hive.exec.dynamic.partition = true;
+          SET hive.exec.dynamic.partition.mode = nonstrict;
+
+          -- Create staging table for loading data
+          CREATE EXTERNAL TABLE IF NOT EXISTS trademarks_staging (
+            registration_number STRING,
+            registration_date STRING,
+            application_number STRING,
+            application_date STRING,
+            priority_date STRING,
+            exhibition_priority_date STRING,
+            paris_convention_priority_number STRING,
+            paris_convention_priority_date STRING,
+            paris_convention_priority_country_code STRING,
+            initial_application_number STRING,
+            initial_application_priority_date STRING,
+            initial_registration_number STRING,
+            initial_registration_date STRING,
+            international_registration_number STRING,
+            international_registration_date STRING,
+            international_registration_priority_date STRING,
+            international_registration_entry_date STRING,
+            application_number_for_recognition_of_trademark_from_crimea STRING,
+            application_date_for_recognition_of_trademark_from_crimea STRING,
+            crimean_trademark_application_number_for_state_registration_in_ukraine STRING,
+            crimean_trademark_application_date_for_state_registration_in_ukraine STRING,
+            crimean_trademark_certificate_number_in_ukraine STRING,
+            exclusive_rights_transfer_agreement_registration_number STRING,
+            exclusive_rights_transfer_agreement_registration_date STRING,
+            legally_related_applications STRING,
+            legally_related_registrations STRING,
+            expiration_date STRING,
+            right_holder_name STRING,
+            foreign_right_holder_name STRING,
+            right_holder_address STRING,
+            right_holder_country_code STRING,
+            right_holder_ogrn STRING,
+            right_holder_inn STRING,
+            correspondence_address STRING,
+            collective STRING,
+            collective_users STRING,
+            extraction_from_charter_of_the_collective_trademark STRING,
+            color_specification STRING,
+            unprotected_elements STRING,
+            kind_specification STRING,
+            threedimensional STRING,
+            threedimensional_specification STRING,
+            holographic STRING,
+            holographic_specification STRING,
+            sound STRING,
+            sound_specification STRING,
+            olfactory STRING,
+            olfactory_specification STRING,
+            color STRING,
+            color_trademark_specification STRING,
+            light STRING,
+            light_specification STRING,
+            changing STRING,
+            changing_specification STRING,
+            positional STRING,
+            positional_specification STRING,
+            actual STRING,
+            publication_url STRING
+          )
+          ROW FORMAT DELIMITED
+          FIELDS TERMINATED BY ','
+          LINES TERMINATED BY '\n'
+          STORED AS TEXTFILE
+          LOCATION '/user/hive/warehouse/trademarks_db.db/trademarks_staging'
+          TBLPROPERTIES ('skip.header.line.count'='1');
+
+          -- Load data from staging table to partitioned table
+          -- Handle BOM character in registration_date by trimming and extracting year
+          INSERT OVERWRITE TABLE trademarks PARTITION (year)
+          SELECT 
+            registration_number,
+            registration_date,
+            application_number,
+            application_date,
+            priority_date,
+            exhibition_priority_date,
+            paris_convention_priority_number,
+            paris_convention_priority_date,
+            paris_convention_priority_country_code,
+            initial_application_number,
+            initial_application_priority_date,
+            initial_registration_number,
+            initial_registration_date,
+            international_registration_number,
+            international_registration_date,
+            international_registration_priority_date,
+            international_registration_entry_date,
+            application_number_for_recognition_of_trademark_from_crimea,
+            application_date_for_recognition_of_trademark_from_crimea,
+            crimean_trademark_application_number_for_state_registration_in_ukraine,
+            crimean_trademark_application_date_for_state_registration_in_ukraine,
+            crimean_trademark_certificate_number_in_ukraine,
+            exclusive_rights_transfer_agreement_registration_number,
+            exclusive_rights_transfer_agreement_registration_date,
+            legally_related_applications,
+            legally_related_registrations,
+            expiration_date,
+            right_holder_name,
+            foreign_right_holder_name,
+            right_holder_address,
+            right_holder_country_code,
+            right_holder_ogrn,
+            right_holder_inn,
+            correspondence_address,
+            collective,
+            collective_users,
+            extraction_from_charter_of_the_collective_trademark,
+            color_specification,
+            unprotected_elements,
+            kind_specification,
+            threedimensional,
+            threedimensional_specification,
+            holographic,
+            holographic_specification,
+            sound,
+            sound_specification,
+            olfactory,
+            olfactory_specification,
+            color,
+            color_trademark_specification,
+            light,
+            light_specification,
+            changing,
+            changing_specification,
+            positional,
+            positional_specification,
+            actual,
+            publication_url,
+            CAST(SUBSTR(TRIM(registration_date), 1, 4) AS INT) AS year
+          FROM trademarks_staging
+          WHERE registration_date IS NOT NULL 
+            AND TRIM(registration_date) != '' 
+            AND LENGTH(TRIM(registration_date)) >= 4
+            AND REGEXP_EXTRACT(TRIM(registration_date), '^[0-9]{4}', 0) != '';
+
+          -- Drop staging table
+          DROP TABLE IF EXISTS trademarks_staging;
+
+          -- Show partition information
+          SHOW PARTITIONS trademarks;
+
+          -- Show count of records per partition
+          SELECT year, COUNT(*) as count FROM trademarks GROUP BY year ORDER BY year;
+        owner: hadoop
+        group: hadoop
+        mode: '0644'
+
+    - name: Execute SQL script via Beeline
+      shell: |
+        . ~/.profile && beeline -u jdbc:hive2://team-1-nn:5433 -f /home/hadoop/load_trademarks.sql
+      register: beeline_result
+      failed_when: beeline_result.rc != 0
+
+    - name: Display load results
+      debug:
+        var: beeline_result.stdout_lines
+
+    - name: Cleanup staging directory in HDFS
+      shell: . ~/.profile && hdfs dfs -rm -r /user/hive/warehouse/trademarks_db.db/trademarks_staging
+      ignore_errors: yes
+
+    - name: Cleanup SQL script
+      file:
+        path: /home/hadoop/load_trademarks.sql
+        state: absent
+
+    - name: Cleanup local data file
+      file:
+        path: /home/hadoop/data-20241101-structure-20180828.csv
+        state: absent
+
+- name: Cleanup temporary file on local machine
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Remove temporary file
+      file:
+        path: /tmp/data-20241101-structure-20180828.csv
+        state: absent
+
