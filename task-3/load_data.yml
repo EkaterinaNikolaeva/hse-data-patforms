@@ -10,12 +10,14 @@
         state: directory
         mode: '0755'
 
-    - name: Download data file using wget
-      shell: |
-        cd /home/team/downloads
-        wget --no-check-certificate https://rospatent.gov.ru/opendata/7730176088-tz/data-20241101-structure-20180828.csv -O data-20241101-structure-20180828.csv
-      args:
-        creates: /home/team/downloads/data-20241101-structure-20180828.csv
+    - name: Download data file
+      get_url:
+        url: https://rospatent.gov.ru/opendata/7730176088-tz/data-20241101-structure-20180828.csv
+        dest: /home/team/downloads/data-20241101-structure-20180828.csv
+        mode: '0644'
+        timeout: 3600
+        validate_certs: no
+        force: no
 
 - name: Fetch data file from jump node to local machine
   hosts: jump_node
