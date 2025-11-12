@@ -112,8 +112,8 @@
 
           -- Create external table with partition by year
           CREATE EXTERNAL TABLE trademarks (
-            registration_number BIGINT,
-            registration_date INT,
+            registration_number BIGINT NOT NULL,
+            registration_date INT NOT NULL,
             application_number INT,
             application_date INT,
             priority_date INT,
@@ -180,7 +180,10 @@
           )
           STORED AS TEXTFILE
           LOCATION '/user/hive/warehouse/trademarks_db.db/trademarks'
-          TBLPROPERTIES ('skip.header.line.count'='1');
+          TBLPROPERTIES (
+            'skip.header.line.count'='1',
+            'comment'='Trademarks table with registration_number as primary key'
+          );
 
           -- Enable dynamic partitioning
           SET hive.exec.dynamic.partition = true;
@@ -259,12 +262,13 @@
 
           -- Load data from staging table to partitioned table
           -- Convert types from STRING to appropriate types (INT, BIGINT, BOOLEAN)
+          -- Filter invalid records: registration_number and registration_date must be valid
           INSERT OVERWRITE TABLE trademarks PARTITION (year)
           SELECT 
             CAST(registration_number AS BIGINT),
             CAST(registration_date AS INT),
-            CAST(application_number AS INT),
-            CAST(application_date AS INT),
+            CAST(NULLIF(application_number, '') AS INT),
+            CAST(NULLIF(application_date, '') AS INT),
             CAST(NULLIF(priority_date, '') AS INT),
             CAST(NULLIF(exhibition_priority_date, '') AS INT),
             paris_convention_priority_number,
@@ -321,7 +325,10 @@
             publication_url,
             CAST(SUBSTR(TRIM(registration_date), 1, 4) AS INT) AS year
           FROM trademarks_staging
-          WHERE registration_date IS NOT NULL 
+          WHERE registration_number IS NOT NULL 
+            AND TRIM(registration_number) != ''
+            AND registration_number RLIKE '^[0-9]+$'
+            AND registration_date IS NOT NULL 
             AND TRIM(registration_date) != '' 
             AND LENGTH(TRIM(registration_date)) >= 4
             AND REGEXP_EXTRACT(TRIM(registration_date), '^[0-9]{4}', 0) != '';
@@ -334,6 +341,16 @@
 
           -- Show count of records per partition
           SELECT year, COUNT(*) as count FROM trademarks GROUP BY year ORDER BY year;
+
+          -- Verify data quality: check for NULL registration_number (should be 0)
+          SELECT COUNT(*) as null_registration_numbers 
+          FROM trademarks 
+          WHERE registration_number IS NULL;
+
+          -- Check for duplicate registration_numbers (registration_number is primary key)
+          SELECT COUNT(*) as total_records, COUNT(DISTINCT registration_number) as unique_registration_numbers,
+                 COUNT(*) - COUNT(DISTINCT registration_number) as duplicates
+          FROM trademarks;
         owner: hadoop
         group: hadoop
         mode: '0644'
