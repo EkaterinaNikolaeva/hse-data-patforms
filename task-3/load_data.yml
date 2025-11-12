@@ -111,9 +111,11 @@
           DROP TABLE IF EXISTS trademarks_staging;
 
           -- Create external table with partition by year
+          -- Note: registration_number is the primary key (unique identifier)
+          -- Note: registration_number and registration_date are required fields (validated in WHERE clause)
           CREATE EXTERNAL TABLE trademarks (
-            registration_number BIGINT NOT NULL,
-            registration_date INT NOT NULL,
+            registration_number BIGINT,
+            registration_date INT,
             application_number INT,
             application_date INT,
             priority_date INT,
