@@ -1,0 +1,47 @@
+- name: Test Hive via Beeline
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Wait for HiveServer2
+      wait_for:
+        host: team-1-nn
+        port: 5433
+        state: started
+      delegate_to: localhost
+
+    - name: Create Beeline test script
+      copy:
+        dest: /home/hadoop/beeline_test.sql
+        content: |
+          CREATE DATABASE IF NOT EXISTS hive_test;
+          USE hive_test;
+          
+          CREATE TABLE IF NOT EXISTS test (id INT, status STRING);
+          INSERT INTO test VALUES (1, 'success');
+          
+          SELECT COUNT(*) FROM test WHERE status = 'success';
+          
+          DROP TABLE test;
+          DROP DATABASE hive_test;
+        owner: hadoop
+        group: hadoop
+        mode: '0644'
+
+    - name: Execute Beeline test
+      shell: |
+        . ~/.profile && beeline -u jdbc:hive2://team-1-nn:5433 -f /home/hadoop/beeline_test.sql
+      register: beeline_test
+      failed_when:
+        - beeline_test.rc != 0
+        - "'success' not in beeline_test.stdout"
+
+    - name: Verify test results
+      debug:
+        msg: "Beeline connectivity test passed successfully"
+      when: beeline_test.rc == 0 and "'success' in beeline_test.stdout"
+
+    - name: Cleanup Beeline test file
+      file:
+        path: /home/hadoop/beeline_test.sql
+        state: absent

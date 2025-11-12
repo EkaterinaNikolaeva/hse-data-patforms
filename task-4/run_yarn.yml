@@ -1,0 +1,26 @@
+- name: Copy YARN and MapReduce configuration files
+  hosts: hadoop_nodes
+  become: yes
+  tasks:
+    - name: Copy YARN and MapReduce configuration files
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: hadoop
+        group: hadoop
+        mode: '0644'
+      loop:
+        - { src: 'yarn-site.xml.j2', dest: '/home/hadoop/hadoop-3.4.0/etc/hadoop/yarn-site.xml' }
+        - { src: 'mapred-site.xml.j2', dest: '/home/hadoop/hadoop-3.4.0/etc/hadoop/mapred-site.xml' }
+
+- name: Start YARN services
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  gather_facts: no
+  tasks:
+    - name: Start YARN
+      command: /home/hadoop/hadoop-3.4.0/sbin/start-yarn.sh
+    
+    - name: Start MapReduce History Server
+      command: /home/hadoop/hadoop-3.4.0/bin/mapred --daemon start historyserver
