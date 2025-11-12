@@ -1,0 +1,135 @@
+---
+- name: Copy MapReduce test files to namenode
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Create test directory
+      file:
+        path: /home/hadoop/mapreduce_test
+        state: directory
+        owner: hadoop
+        group: hadoop
+        mode: '0755'
+
+    - name: Copy mapper.py
+      copy:
+        src: mapper.py
+        dest: /home/hadoop/mapreduce_test/mapper.py
+        owner: hadoop
+        group: hadoop
+        mode: '0755'
+
+    - name: Copy reducer.py
+      copy:
+        src: reducer.py
+        dest: /home/hadoop/mapreduce_test/reducer.py
+        owner: hadoop
+        group: hadoop
+        mode: '0755'
+
+    - name: Copy test files
+      copy:
+        src: "{{ item }}"
+        dest: /home/hadoop/mapreduce_test/{{ item }}
+        owner: hadoop
+        group: hadoop
+        mode: '0644'
+      loop:
+        - file1.txt
+        - file2.txt
+        - file3.txt
+
+- name: Upload test files to HDFS
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Remove existing input directory if exists
+      command: /home/hadoop/hadoop-3.4.0/bin/hdfs dfs -rm -r input/
+      ignore_errors: yes
+
+    - name: Create input directory in HDFS
+      command: /home/hadoop/hadoop-3.4.0/bin/hdfs dfs -mkdir -p input/
+      ignore_errors: yes
+
+    - name: Upload test files to HDFS
+      command: /home/hadoop/hadoop-3.4.0/bin/hdfs dfs -put /home/hadoop/mapreduce_test/{{ item }} input/
+      loop:
+        - file1.txt
+        - file2.txt
+        - file3.txt
+
+    - name: List uploaded files
+      command: /home/hadoop/hadoop-3.4.0/bin/hdfs dfs -ls input/
+      register: hdfs_files
+      changed_when: false
+
+    - name: Display uploaded files
+      debug:
+        var: hdfs_files.stdout_lines
+
+- name: Run MapReduce job
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Remove existing output directory if exists
+      command: /home/hadoop/hadoop-3.4.0/bin/hdfs dfs -rm -r output
+      ignore_errors: yes
+
+    - name: Run MapReduce streaming job with YARN
+      command: /home/hadoop/hadoop-3.4.0/bin/hadoop jar /home/hadoop/hadoop-3.4.0/share/hadoop/tools/lib/hadoop-streaming-3.4.0.jar -files /home/hadoop/mapreduce_test/mapper.py,/home/hadoop/mapreduce_test/reducer.py -mapper "python3 /home/hadoop/mapreduce_test/mapper.py" -reducer "python3 /home/hadoop/mapreduce_test/reducer.py" -input input/ -output output
+      register: mapreduce_result
+
+    - name: Display MapReduce job result
+      debug:
+        var: mapreduce_result.stdout_lines
+
+- name: Verify results
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Get MapReduce results
+      command: /home/hadoop/hadoop-3.4.0/bin/hdfs dfs -cat output/part-00000
+      register: mapreduce_results
+      changed_when: false
+
+    - name: Display results
+      debug:
+        msg: "MapReduce Results:"
+      when: mapreduce_results.stdout_lines is defined
+
+    - name: Display each result line
+      debug:
+        msg: "{{ item }}"
+      loop: "{{ mapreduce_results.stdout_lines }}"
+      when: mapreduce_results.stdout_lines is defined
+
+    - name: Expected results
+      debug:
+        msg: |
+          Expected results:
+          cluster	1
+          hadoop	2
+          hello	2
+          mapreduce	1
+          python	1
+          test	1
+          working	1
+          yarn	2
+
+- name: Clean up test data
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Remove test data from HDFS
+      command: /home/hadoop/hadoop-3.4.0/bin/hdfs dfs -rm -r input output
+      ignore_errors: yes
+
+    - name: Remove local test directory
+      file:
+        path: /home/hadoop/mapreduce_test
+        state: absent
