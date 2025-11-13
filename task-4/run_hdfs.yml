@@ -136,6 +136,7 @@
         - "export HADOOP_HOME=/home/hadoop/hadoop-3.4.0"
         - "export JAVA_HOME=/usr/bin/jvm/java-11-openjdk-amd64"
         - "export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin"
+        - "export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop"
 
 - name: Format and start HDFS
   hosts: namenodes
