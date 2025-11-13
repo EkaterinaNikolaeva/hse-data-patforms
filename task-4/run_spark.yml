@@ -1,0 +1,105 @@
+- name: Prepare download dir and fetch dataset on jump node
+  hosts: jump_node
+  remote_user: team
+  gather_facts: no
+  tasks:
+    - name: Ensure directory exists for download
+      file:
+        path: /home/team/downloads
+        state: directory
+        mode: '0755'
+
+    - name: Download dataset
+      get_url:
+        url: https://www.kaggle.com/api/v1/datasets/download/wafaaelhusseini/capital-weather-data-1995-2024
+        dest: /home/team/downloads/input.zip
+        mode: '0644'
+        timeout: 1800
+        force: no
+
+    - name: Unarchive the dataset
+      unarchive:
+        src: /home/team/downloads/input.zip
+        dest: /home/team/downloads
+        remote_src: yes
+        creates: /home/team/downloads/history.parquet
+
+- name: Preparation and configuration
+  hosts: namenodes
+  become: yes
+  tasks:
+    - name: Copy dataset
+      copy:
+        src: /home/team/downloads/history.parquet
+        dest: /home/hadoop/history.parquet
+        mode: '0644'
+        owner: hadoop
+        group: hadoop
+
+    - name: Copy Python script
+      copy:
+        src: create_history_table.py
+        dest: /home/hadoop/main.py
+        mode: '0644'
+        owner: hadoop
+        group: hadoop
+
+    - name: Install Python Virtual Environment
+      apt:
+        name: python3-venv
+        state: present
+
+- name: Dataset manipulation
+  hosts: namenodes
+  become: yes
+  become_user: hadoop
+  tasks:
+    - name: Put dataset to HDFS
+      shell: ". ~/.profile && {{ item }}"
+      loop:
+        - hdfs dfs -test -d /input || hdfs dfs -mkdir -p /input
+        - hdfs dfs -put -f /home/hadoop/history.parquet /input/
+
+    - name: Create Python virtual environment
+      shell: python3 -m venv /home/hadoop/.env
+
+    - name: Upgrade pip
+      shell: . /home/hadoop/.env/bin/activate && pip install -U pip
+
+    - name: Install required Python packages inside venv
+      shell: . /home/hadoop/.env/bin/activate && pip install pyspark==3.5.6 onetl
+
+    - name: Run beeline to create database 'test'
+      shell: |
+        . ~/.profile && beeline -u jdbc:hive2://team-1-nn:5433 -e "CREATE DATABASE IF NOT EXISTS test;"
+
+    - name: Run python main.py using virtualenv
+      shell: . ~/.profile && . /home/hadoop/.env/bin/activate && JAVA_HOME="" python /home/hadoop/main.py
+
+    - name: Create Beeline test script
+      copy:
+        dest: /home/hadoop/beeline_test.sql
+        content: |
+          USE test;
+          SELECT COUNT(*) FROM history WHERE year = '1995';
+        owner: hadoop
+        group: hadoop
+        mode: '0644'
+
+    - name: Execute Beeline test
+      shell: |
+        . ~/.profile && beeline -u jdbc:hive2://team-1-nn:5433 -f /home/hadoop/beeline_test.sql
+      register: beeline_test
+      failed_when:
+        - beeline_test.rc != 0
+        - "'success' not in beeline_test.stdout"
+
+    - name: Verify test results
+      debug:
+        msg: "Beeline connectivity test passed successfully"
+      when: beeline_test.rc == 0 and "'success' in beeline_test.stdout"
+
+    - name: Cleanup Beeline test file
+      file:
+        path: /home/hadoop/beeline_test.sql
+        state: absent
