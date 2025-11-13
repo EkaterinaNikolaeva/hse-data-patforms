@@ -17,6 +17,8 @@ def parse_args():
     yarn_test_parser.set_defaults(func=action_yarn_test)
     hive_test_parser = subparsers.add_parser("hive-test", help="Test Hive functionality")
     hive_test_parser.set_defaults(func=action_hive_test)
+    load_data_parser = subparsers.add_parser("load-data", help="Load data in Hive ")
+    load_data_parser.set_defaults(func=action_load_data)
     clean_parser = subparsers.add_parser(
         "clean", help="clear everything related to hdfs"
     )
@@ -62,15 +64,13 @@ def action_hive_test():
     subprocess.check_call(["ansible-playbook", "hive_test/test_beeline.yml", "-i", "inventory.ini"])
 
 
+def action_load_data():
+    subprocess.check_call(["ansible", "all", "-m", "ping"])
+    subprocess.check_call(["ansible-playbook", "load_data.yml", "-i", "inventory.ini"])
+
+
 def action_clean():
-    cmd = ["ansible-playbook", "cleanup.yml"]
-    
-    args = parse_args()
-    
-    if hasattr(args, 'keep_archives') and args.keep_archives:
-        cmd.extend(["-e", "keep_archives=true"])
-    
-    subprocess.check_call(cmd)
+    subprocess.check_call(["ansible-playbook", "cleanup.yml", "-i", "inventory.ini"])
 
 
 def main():
