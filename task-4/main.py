@@ -13,6 +13,8 @@ def parse_args():
     yarn_parser.set_defaults(func=action_yarn)
     hive_parser = subparsers.add_parser("hive", help="Run Hive configuration")
     hive_parser.set_defaults(func=action_hive)
+    spark_parser = subparsers.add_parser("spark", help="Run Spark configuration")
+    spark_parser.set_defaults(func=action_spark)
     yarn_test_parser = subparsers.add_parser("yarn-test", help="Test MapReduce functionality")
     yarn_test_parser.set_defaults(func=action_yarn_test)
     hive_test_parser = subparsers.add_parser("hive-test", help="Test Hive functionality")
@@ -33,6 +35,7 @@ def action_prepare():
     subprocess.check_call(["sudo", "apt", "update"])
     subprocess.check_call(["sudo", "apt", "install", "ansible", "-y"])
     subprocess.check_call(["sudo", "apt", "install", "sshpass", "-y"])
+    subprocess.check_call(["sudo", "apt", "install", "unzip", "-y"])
     subprocess.check_call(["ansible", "--version"])
 
 
@@ -50,6 +53,11 @@ def action_yarn():
 def action_hive():
     subprocess.check_call(["ansible", "all", "-m", "ping"])
     subprocess.check_call(["ansible-playbook", "run_hive.yml"])
+
+
+def action_spark():
+    subprocess.check_call(["ansible", "all", "-m", "ping"])
+    subprocess.check_call(["ansible-playbook", "run_spark.yml"])
 
 
 def action_yarn_test():

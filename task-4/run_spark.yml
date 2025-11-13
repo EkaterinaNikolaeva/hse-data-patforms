@@ -3,11 +3,6 @@
   remote_user: team
   gather_facts: no
   tasks:
-    - name: Install unzip
-      apt:
-        name: unzip
-        state: present
-
     - name: Ensure directory exists for download
       file:
         path: /home/team/downloads
@@ -43,7 +38,7 @@
 
     - name: Copy Python script
       copy:
-        src: run.py
+        src: create_history_table.py
         dest: /home/hadoop/main.py
         mode: '0644'
         owner: hadoop
