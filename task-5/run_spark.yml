@@ -69,3 +69,18 @@
     - name: Install required Python packages from requirements.txt
       shell: . /home/hadoop/.env/bin/activate && pip install -r /home/hadoop/requirements.txt
 
+    - name: Copy prefect_flow.py
+      copy:
+        src: prefect_flow.py
+        dest: /home/hadoop/prefect_flow.py
+        mode: '0644'
+        owner: hadoop
+        group: hadoop
+
+    - name: Run Prefect flow
+      shell: |
+        . ~/.profile
+        . /home/hadoop/.env/bin/activate
+        cd /home/hadoop
+        python3 prefect_flow.py
+
