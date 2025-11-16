@@ -1,0 +1,4 @@
+prefect>=2.14.0
+pyspark==3.5.6
+onetl>=0.9.0
+
