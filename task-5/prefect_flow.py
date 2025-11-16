@@ -1,4 +1,5 @@
 from prefect import flow, task
+from prefect.tasks import NO_CACHE
 from pyspark.sql import SparkSession
 from onetl.connection import Hive, SparkHDFS
 from onetl.file import FileDFReader
@@ -7,7 +8,7 @@ from onetl.db import DBWriter
 import os
 
 
-@task(name="init_spark")
+@task(name="init_spark", cache_policy=NO_CACHE)
 def init_spark(app_name="prefect-flow"):    
     os.environ["HADOOP_CONF_DIR"] = os.environ.get("HADOOP_CONF_DIR", "/home/hadoop/hadoop-3.4.0/etc/hadoop")
     
@@ -26,12 +27,12 @@ def init_spark(app_name="prefect-flow"):
     return spark
 
 
-@task(name="stop_spark")
+@task(name="stop_spark", cache_policy=NO_CACHE)
 def stop_spark(spark):
     spark.stop()
 
 
-@task(name="extract")
+@task(name="extract", cache_policy=NO_CACHE)
 def extract(spark, hdfs_host="team-1-nn", hdfs_port=9000, source_path="/input/", file_pattern="history.parquet"):
     hdfs = SparkHDFS(host=hdfs_host, port=hdfs_port, spark=spark, cluster="smthng")
     reader = FileDFReader(connection=hdfs, format=Parquet(), source_path=source_path)
@@ -39,14 +40,15 @@ def extract(spark, hdfs_host="team-1-nn", hdfs_port=9000, source_path="/input/",
     return df
 
 
-@task(name="transform")
+@task(name="transform", cache_policy=NO_CACHE)
 def transform(df):
     df = df.groupBy("date").agg({"rain_mm": "max"}).withColumn("year", df.date.substr(0, 4))
     return df
 
 
-@task(name="load")
+@task(name="load", cache_policy=NO_CACHE)
 def load(spark, df, table_name="test.history", partition_by=["year"]):
+    spark.sql("CREATE DATABASE IF NOT EXISTS test")
     hive = Hive(spark=spark, cluster="smthng")
     writer = DBWriter(connection=hive, target=table_name, options=Hive.WriteOptions(partitionBy=partition_by))
     writer.run(df)
