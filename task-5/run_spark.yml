@@ -69,6 +69,3 @@
     - name: Install required Python packages from requirements.txt
       shell: . /home/hadoop/.env/bin/activate && pip install -r /home/hadoop/requirements.txt
 
-    - name: Run beeline to create database 'test'
-      shell: |
-        . ~/.profile && beeline -u jdbc:hive2://team-1-nn:5433 -e "CREATE DATABASE IF NOT EXISTS test;"
