@@ -149,7 +149,7 @@
       shell: . ~/.profile && schematool -dbType postgres -initOrUpgradeSchema
 
     - name: Start Hive Metastore
-      shell: . ~/.profile && cd ~ && tmux new -d \"hive --service metastore\""
+      shell: . ~/.profile && cd ~ && tmux new -d "hive --service metastore"
 
     - name: Start HiveServer2
-      shell: . ~/.profile && cd ~ && tmux new -d \"hive --hiveconf hive.server2.enable.doAs=false --hiveconf hive.security.authorization.enabled=false --service hiveserver2\""
+      shell: . ~/.profile && cd ~ && tmux new -d "hive --hiveconf hive.server2.enable.doAs=false --hiveconf hive.security.authorization.enabled=false --service hiveserver2"
