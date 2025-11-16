@@ -36,14 +36,6 @@
         owner: hadoop
         group: hadoop
 
-    - name: Copy Python script
-      copy:
-        src: create_history_table.py
-        dest: /home/hadoop/main.py
-        mode: '0644'
-        owner: hadoop
-        group: hadoop
-
     - name: Copy requirements.txt
       copy:
         src: requirements.txt
