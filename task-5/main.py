@@ -22,8 +22,8 @@ def parse_args():
     clean_parser = subparsers.add_parser(
         "clean", help="clear everything related to hdfs"
     )
-    prefect_parser = subparsers.add_parser("prefect-flow", help="Run Prefect flow for Spark data processing")
-    prefect_parser.set_defaults(func=action_prefect_flow)
+    # prefect_parser = subparsers.add_parser("prefect-flow", help="Run Prefect flow for Spark data processing")
+    # prefect_parser.set_defaults(func=action_prefect_flow)
 
     clean_parser.add_argument(
         "--keep-archives", 
@@ -73,23 +73,8 @@ def action_hive_test():
     subprocess.check_call(["ansible-playbook", "hive_test/test_beeline.yml", "-i", "inventory.ini"])
 
 
-def action_prefect_flow():
-    import subprocess
-    import os
-    
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    prefect_flow_path = os.path.join(current_dir, "prefect_flow.py")
-    
-    subprocess.check_call(["ansible", "namenodes", "-m", "copy", 
-                          "-a", f"src={prefect_flow_path} dest=/home/hadoop/prefect_flow.py owner=hadoop group=hadoop mode=0644",
-                          "--become"])
-    
-    subprocess.check_call([
-        "ansible", "namenodes", "-m", "shell",
-        "-a", ". ~/.profile && . /home/hadoop/.env/bin/activate && cd /home/hadoop && python3 prefect_flow.py",
-        "--become", "--become-user", "hadoop"
-    ])
-
+# def action_prefect_flow(): 
+    #todo?
 
 def action_clean():
     cmd = ["ansible-playbook", "cleanup.yml"]
