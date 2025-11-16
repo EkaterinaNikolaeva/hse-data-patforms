@@ -44,6 +44,14 @@
         owner: hadoop
         group: hadoop
 
+    - name: Copy requirements.txt
+      copy:
+        src: requirements.txt
+        dest: /home/hadoop/requirements.txt
+        mode: '0644'
+        owner: hadoop
+        group: hadoop
+
     - name: Install Python Virtual Environment
       apt:
         name: python3-venv
@@ -66,8 +74,8 @@
     - name: Upgrade pip
       shell: . /home/hadoop/.env/bin/activate && pip install -U pip
 
-    - name: Install required Python packages inside venv
-      shell: . /home/hadoop/.env/bin/activate && pip install pyspark==3.5.6 onetl
+    - name: Install required Python packages from requirements.txt
+      shell: . /home/hadoop/.env/bin/activate && pip install -r /home/hadoop/requirements.txt
 
     - name: Run beeline to create database 'test'
       shell: |

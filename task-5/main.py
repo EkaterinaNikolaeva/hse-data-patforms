@@ -22,6 +22,9 @@ def parse_args():
     clean_parser = subparsers.add_parser(
         "clean", help="clear everything related to hdfs"
     )
+    prefect_parser = subparsers.add_parser("prefect-flow", help="Run Prefect flow for Spark data processing")
+    prefect_parser.set_defaults(func=action_prefect_flow)
+
     clean_parser.add_argument(
         "--keep-archives", 
         action="store_true", 
@@ -68,6 +71,19 @@ def action_yarn_test():
 def action_hive_test():
     subprocess.check_call(["ansible", "all", "-m", "ping"])
     subprocess.check_call(["ansible-playbook", "hive_test/test_beeline.yml", "-i", "inventory.ini"])
+
+
+def action_prefect_flow():
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from prefect_flow import process_data
+    process_data(
+        hdfs_source_path="/input/",
+        file_pattern="history.parquet",
+        table_name="test.history",
+        partition_by=["year"]
+    )
 
 
 def action_clean():
