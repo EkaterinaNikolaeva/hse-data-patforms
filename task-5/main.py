@@ -15,9 +15,13 @@ def parse_args():
     hive_parser.set_defaults(func=action_hive)
     spark_parser = subparsers.add_parser("spark", help="Run Spark configuration")
     spark_parser.set_defaults(func=action_spark)
-    yarn_test_parser = subparsers.add_parser("yarn-test", help="Test MapReduce functionality")
+    yarn_test_parser = subparsers.add_parser(
+        "yarn-test", help="Test MapReduce functionality"
+    )
     yarn_test_parser.set_defaults(func=action_yarn_test)
-    hive_test_parser = subparsers.add_parser("hive-test", help="Test Hive functionality")
+    hive_test_parser = subparsers.add_parser(
+        "hive-test", help="Test Hive functionality"
+    )
     hive_test_parser.set_defaults(func=action_hive_test)
     clean_parser = subparsers.add_parser(
         "clean", help="clear everything related to hdfs"
@@ -26,9 +30,9 @@ def parse_args():
     # prefect_parser.set_defaults(func=action_prefect_flow)
 
     clean_parser.add_argument(
-        "--keep-archives", 
-        action="store_true", 
-        help="Keep downloaded archives (Hadoop, Hive) after cleanup"
+        "--keep-archives",
+        action="store_true",
+        help="Keep downloaded archives (Hadoop, Hive) after cleanup",
     )
     clean_parser.set_defaults(func=action_clean)
     return parser.parse_args()
@@ -40,7 +44,6 @@ def action_prepare():
     subprocess.check_call(["sudo", "apt", "install", "sshpass", "-y"])
     subprocess.check_call(["sudo", "apt", "install", "unzip", "-y"])
     subprocess.check_call(["ansible", "--version"])
-
 
 
 def action_hdfs():
@@ -65,25 +68,30 @@ def action_spark():
 
 def action_yarn_test():
     subprocess.check_call(["ansible", "all", "-m", "ping"])
-    subprocess.check_call(["ansible-playbook", "yarn_test/test_mapreduce.yml", "-i", "inventory.ini"])
+    subprocess.check_call(
+        ["ansible-playbook", "yarn_test/test_mapreduce.yml", "-i", "inventory.ini"]
+    )
 
 
 def action_hive_test():
     subprocess.check_call(["ansible", "all", "-m", "ping"])
-    subprocess.check_call(["ansible-playbook", "hive_test/test_beeline.yml", "-i", "inventory.ini"])
+    subprocess.check_call(
+        ["ansible-playbook", "hive_test/test_beeline.yml", "-i", "inventory.ini"]
+    )
 
 
-# def action_prefect_flow(): 
-    #todo?
+# def action_prefect_flow():
+# todo?
+
 
 def action_clean():
     cmd = ["ansible-playbook", "cleanup.yml"]
-    
+
     args = parse_args()
-    
-    if hasattr(args, 'keep_archives') and args.keep_archives:
+
+    if hasattr(args, "keep_archives") and args.keep_archives:
         cmd.extend(["-e", "keep_archives=true"])
-    
+
     subprocess.check_call(cmd)
 
 
