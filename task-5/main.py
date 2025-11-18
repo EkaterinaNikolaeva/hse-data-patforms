@@ -15,6 +15,11 @@ def parse_args():
     hive_parser.set_defaults(func=action_hive)
     spark_parser = subparsers.add_parser("spark", help="Run Spark configuration")
     spark_parser.set_defaults(func=action_spark)
+    beeline_parser = subparsers.add_parser("beeline", help="Run Spark + beeline")
+    beeline_parser.set_defaults(func=action_spark_beeline)
+    prefect_parser = subparsers.add_parser("prefect", help="Run Spark + Prefect")
+    prefect_parser.set_defaults(func=action_spark_prefect)
+
     yarn_test_parser = subparsers.add_parser(
         "yarn-test", help="Test MapReduce functionality"
     )
@@ -26,8 +31,6 @@ def parse_args():
     clean_parser = subparsers.add_parser(
         "clean", help="clear everything related to hdfs"
     )
-    # prefect_parser = subparsers.add_parser("prefect-flow", help="Run Prefect flow for Spark data processing")
-    # prefect_parser.set_defaults(func=action_prefect_flow)
 
     clean_parser.add_argument(
         "--keep-archives",
@@ -66,6 +69,20 @@ def action_spark():
     subprocess.check_call(["ansible-playbook", "run_spark.yml"])
 
 
+def action_spark_beeline():
+    subprocess.check_call(["ansible", "all", "-m", "ping"])
+    subprocess.check_call(
+        ["ansible-playbook", "run_spark.yml", "-e", "run_beeline=true"]
+    )
+
+
+def action_spark_prefect():
+    subprocess.check_call(["ansible", "all", "-m", "ping"])
+    subprocess.check_call(
+        ["ansible-playbook", "run_spark.yml", "-e", "run_prefect=true"]
+    )
+
+
 def action_yarn_test():
     subprocess.check_call(["ansible", "all", "-m", "ping"])
     subprocess.check_call(
@@ -78,10 +95,6 @@ def action_hive_test():
     subprocess.check_call(
         ["ansible-playbook", "hive_test/test_beeline.yml", "-i", "inventory.ini"]
     )
-
-
-# def action_prefect_flow():
-# todo?
 
 
 def action_clean():
