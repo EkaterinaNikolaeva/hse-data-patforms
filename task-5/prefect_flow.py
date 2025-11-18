@@ -1,6 +1,7 @@
 from prefect import flow, task
 from prefect.tasks import NO_CACHE
 from pyspark.sql import SparkSession
+from pyspark.sql import functions
 from onetl.connection import Hive, SparkHDFS
 from onetl.file import FileDFReader
 from onetl.file.format import Parquet
@@ -42,8 +43,27 @@ def extract(spark, hdfs_host="team-1-nn", hdfs_port=9000, source_path="/input/",
 
 @task(name="transform", cache_policy=NO_CACHE)
 def transform(df):
-    df = df.groupBy("date").agg({"rain_mm": "max"}).withColumn("year", df.date.substr(0, 4))
-    return df
+    df = df.withColumn(
+        "date_clean",
+        functions.to_date("date"),
+    ).filter(functions.col("date_clean").isNotNull())
+
+    df = df.withColumn(
+        "year",
+        functions.year("date_clean"),
+    ).withColumn(
+        "month",
+        functions.month("date_clean"),
+    )
+
+    df = df.withColumn("is_rain", (functions.col("rain_mm") > 0).cast("int"))
+
+    df_agg = df.groupBy("date_clean", "year", "month").agg(
+        functions.max("rain_mm").alias("rain_max"),
+        functions.sum("is_rain").alias("rain_events"),
+    )
+
+    return df_agg
 
 
 @task(name="load", cache_policy=NO_CACHE)
