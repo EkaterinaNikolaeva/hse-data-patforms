@@ -8,7 +8,7 @@ ssh user@91.185.85.179
 
 2. Скачивание и распаковка данных
 
-```
+```bash
 mkdir ~/data/
 cd ~/data/
 curl -L -o ./data.zip https://www.kaggle.com/api/v1/datasets/download/saurabh00007/iriscsv
@@ -23,7 +23,7 @@ gpfdist -d /home/user/data -p 8081
 
 4. Подключение к базе
 
-```
+```bash
 psql -d idp
 ```
 
@@ -63,7 +63,7 @@ DISTRIBUTED BY (Id);
 
 7. Загрузка данных
 
-```
+```sql
 INSERT INTO iris_team_1
 SELECT * FROM ext_iris_team_1;
 ```
